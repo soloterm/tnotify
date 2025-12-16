@@ -22,7 +22,8 @@ builds:
     binary: tnotify
 
 archives:
-  - format: tar.gz
+  - formats:
+      - tar.gz
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
@@ -30,7 +31,8 @@ archives:
       {{- .Arch }}
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
 
 checksum:
   name_template: 'checksums.txt'
@@ -48,7 +50,7 @@ changelog:
       - Merge pull request
       - Merge branch
 
-brews:
+homebrew_casks:
   - name: tnotify
     repository:
       owner: soloterm
@@ -57,11 +59,8 @@ brews:
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
-    directory: Formula
     homepage: "https://github.com/soloterm/tnotify"
     description: "Send desktop notifications from the terminal via OSC sequences or native tools"
-    license: "MIT"
-    test: |
-      system "#{bin}/tnotify", "--version"
-    install: |
-      bin.install "tnotify"
+    hooks:
+      post_install:
+        - "xattr -dr com.apple.quarantine #{caskroom_path}"
