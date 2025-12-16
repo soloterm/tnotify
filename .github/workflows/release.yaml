@@ -1,17 +1,28 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
 
 jobs:
-  goreleaser:
+  release:
     runs-on: ubuntu-latest
+    if: github.actor == 'aarondfrancis'
     steps:
+      - name: Validate version format
+        run: |
+          if [[ ! "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Version must be in format X.Y.Z (e.g., 1.0.0)"
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -21,6 +32,13 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
+
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
