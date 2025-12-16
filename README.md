@@ -75,6 +75,20 @@ tnotify --fireworks  # With fireworks animation
 tnotify --version
 ```
 
+## Screenshots
+
+### Desktop Notifications
+
+| Ghostty (OSC 777) | iTerm2 (OSC 9) | macOS Native Fallback |
+|-------------------|----------------|----------------------|
+| ![Ghostty notification](art/ghostty-osc.png) | ![iTerm2 notification](art/iterm-osc.png) | ![macOS native notification](art/mac-fallback.png) |
+
+### Progress Bars
+
+| iTerm2 | Ghostty |
+|--------|---------|
+| ![iTerm2 progress bar](art/iterm-progress.png) | ![Ghostty progress bar](art/ghostty-progress.png) |
+
 ## Terminal Support
 
 | Terminal | Protocol | Title | Urgency | IDs | Progress | Attention |
