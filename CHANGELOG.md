@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2025-12-16
+
 ### Added
 - Version check with `--version` / `-v` that shows current version and checks GitHub for updates
 - Progress bar support via OSC 9;4 (`-p`, `--progress-state`, `--progress-clear`)
@@ -43,5 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--capabilities` JSON output
 - `--diagnose` troubleshooting command
 
-[Unreleased]: https://github.com/soloterm/tnotify/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/soloterm/tnotify/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/soloterm/tnotify/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/soloterm/tnotify/releases/tag/v0.1.0
