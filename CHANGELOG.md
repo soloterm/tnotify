@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] - 2025-12-16
+
 ### Added
 - iTerm2 3.6.6+ progress bar support via OSC 9;4
+
 
 ## [0.1.5] - 2025-12-16
 
@@ -77,7 +80,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--capabilities` JSON output
 - `--diagnose` troubleshooting command
 
-[Unreleased]: https://github.com/soloterm/tnotify/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/soloterm/tnotify/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/soloterm/tnotify/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/soloterm/tnotify/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/soloterm/tnotify/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/soloterm/tnotify/compare/v0.1.2...v0.1.3
