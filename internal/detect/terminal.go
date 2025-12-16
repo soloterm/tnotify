@@ -120,6 +120,17 @@ func SelectProtocol(terminal Terminal) Protocol {
 	}
 }
 
+// SupportsProgress returns true if the terminal supports OSC 9;4 progress bars.
+// Supported by: Windows Terminal, Ghostty, ConEmu, Mintty
+func SupportsProgress(terminal Terminal) bool {
+	switch terminal {
+	case TerminalWindowsTerminal, TerminalGhostty:
+		return true
+	default:
+		return false
+	}
+}
+
 // Capabilities describes terminal notification capabilities.
 type Capabilities struct {
 	Terminal         Terminal `json:"terminal"`
@@ -127,6 +138,7 @@ type Capabilities struct {
 	SupportsTitle    bool     `json:"supports_title"`
 	SupportsUrgency  bool     `json:"supports_urgency"`
 	SupportsID       bool     `json:"supports_id"`
+	SupportsProgress bool     `json:"supports_progress"`
 	InMultiplexer    bool     `json:"in_multiplexer"`
 	NativeAvailable  bool     `json:"native_available"`
 }
@@ -142,6 +154,7 @@ func GetCapabilities(nativeAvailable bool) Capabilities {
 		SupportsTitle:    protocol == ProtocolOSC777 || protocol == ProtocolOSC99,
 		SupportsUrgency:  protocol == ProtocolOSC99,
 		SupportsID:       protocol == ProtocolOSC99,
+		SupportsProgress: SupportsProgress(terminal),
 		InMultiplexer:    InTmux() || InScreen(),
 		NativeAvailable:  nativeAvailable,
 	}

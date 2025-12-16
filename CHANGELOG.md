@@ -8,7 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Progress bar test in `--diagnose` command
+- Progress bar test in `--diagnose` command (only on supported terminals)
+- `supports_progress` field in `--capabilities` JSON output
+
+### Changed
+- Improved `--diagnose` timing: longer pauses between tests, slower progress bar animation
+
+### Fixed
+- Progress bar now only sends OSC 9;4 sequences on supported terminals (Windows Terminal, Ghostty)
+- On unsupported terminals, `-p` prints plain text "Progress: X%" instead of ANSI garbage
 
 ## [0.1.4] - 2025-12-16
 

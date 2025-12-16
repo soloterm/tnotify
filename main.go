@@ -126,6 +126,11 @@ func run(cmd *cobra.Command, args []string) error {
 
 	// Handle --progress-clear
 	if clearProgress {
+		terminal := detect.DetectTerminal()
+		if !detect.SupportsProgress(terminal) {
+			// Silently ignore on unsupported terminals
+			return nil
+		}
 		sequence := osc.BuildOSC9ProgressClear()
 		sequence = osc.WrapForMultiplexer(sequence)
 		fmt.Print(sequence)
@@ -134,6 +139,12 @@ func run(cmd *cobra.Command, args []string) error {
 
 	// Handle --progress
 	if progress >= 0 {
+		terminal := detect.DetectTerminal()
+		if !detect.SupportsProgress(terminal) {
+			// Print plain text progress on unsupported terminals
+			fmt.Printf("Progress: %d%%\n", progress)
+			return nil
+		}
 		state := parseProgressState(progressState)
 		sequence := osc.BuildOSC9Progress(state, progress)
 		sequence = osc.WrapForMultiplexer(sequence)
@@ -378,7 +389,7 @@ func runDiagnose() error {
 		fmt.Print(sequence)
 		fmt.Println("sent")
 		results = append(results, struct{ name, result string }{protocolName(protocol), "sent"})
-		time.Sleep(2 * time.Second)
+		time.Sleep(3 * time.Second)
 	} else {
 		fmt.Println("Skipping OSC: no protocol detected for this terminal")
 		results = append(results, struct{ name, result string }{"OSC", "skipped (unsupported terminal)"})
@@ -394,26 +405,36 @@ func runDiagnose() error {
 			fmt.Println("failed")
 			results = append(results, struct{ name, result string }{"Native", "failed"})
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(3 * time.Second)
 	} else {
 		fmt.Println("Skipping native: not available on this system")
 		results = append(results, struct{ name, result string }{"Native", "skipped (unavailable)"})
 	}
 
 	// Test 3: Progress bar
-	fmt.Print("Testing progress bar (OSC 9;4)... ")
-	for i := 0; i <= 100; i += 10 {
-		sequence := osc.BuildOSC9Progress(osc.ProgressNormal, i)
-		sequence = osc.WrapForMultiplexer(sequence)
-		fmt.Print(sequence)
-		time.Sleep(100 * time.Millisecond)
+	if detect.SupportsProgress(terminal) {
+		fmt.Println("Testing progress bar (OSC 9;4)... watch the top of the terminal window")
+		for i := 0; i <= 100; i += 5 {
+			sequence := osc.BuildOSC9Progress(osc.ProgressNormal, i)
+			sequence = osc.WrapForMultiplexer(sequence)
+			fmt.Print(sequence)
+			fmt.Printf("\r  Progress: %3d%%", i)
+			time.Sleep(200 * time.Millisecond)
+		}
+		fmt.Println(" done")
+		// Hold at 100% for a moment before clearing
+		time.Sleep(1 * time.Second)
+		// Clear progress
+		clearSeq := osc.BuildOSC9ProgressClear()
+		clearSeq = osc.WrapForMultiplexer(clearSeq)
+		fmt.Print(clearSeq)
+		fmt.Println("  Progress bar cleared")
+		results = append(results, struct{ name, result string }{"Progress", "sent"})
+		time.Sleep(2 * time.Second)
+	} else {
+		fmt.Println("Skipping progress bar: not supported by this terminal")
+		results = append(results, struct{ name, result string }{"Progress", "skipped (unsupported)"})
 	}
-	// Clear progress
-	clearSeq := osc.BuildOSC9ProgressClear()
-	clearSeq = osc.WrapForMultiplexer(clearSeq)
-	fmt.Print(clearSeq)
-	fmt.Println("sent (check terminal tab/taskbar)")
-	results = append(results, struct{ name, result string }{"Progress", "sent"})
 
 	// Test 4: Bell
 	fmt.Print("Testing terminal bell... ")
