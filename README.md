@@ -222,6 +222,16 @@ This will show your detected terminal, test each method, and report what works.
    ```
    Run `tnotify --diagnose` inside tmux to check if passthrough is configured.
 
+## Related Projects
+
+- [Solo](https://github.com/soloterm/solo) - All-in-one Laravel command for local development
+- [Screen](https://github.com/soloterm/screen) - Pure PHP terminal renderer
+- [Dumps](https://github.com/soloterm/dumps) - Laravel command to intercept dumps
+- [Grapheme](https://github.com/soloterm/grapheme) - Unicode grapheme width calculator
+- [Notify](https://github.com/soloterm/notify) - PHP package for desktop notifications via OSC escape sequences
+- [Notify Laravel](https://github.com/soloterm/notify-laravel) - Laravel integration for soloterm/notify
+- [VTail](https://github.com/soloterm/vtail) - Vendor-aware tail for Laravel logs
+
 ## License
 
 MIT
