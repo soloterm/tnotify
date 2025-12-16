@@ -43,8 +43,27 @@ jobs:
             exit 1
           fi
 
-          # Replace [Unreleased] with the new version and date
-          sed -i "s/## \[Unreleased\]/## [Unreleased]\n\n## [$VERSION] - $DATE/" CHANGELOG.md
+          # Use awk to properly move content from [Unreleased] to the new version
+          awk -v version="$VERSION" -v date="$DATE" '
+            BEGIN { in_unreleased = 0; content = "" }
+            /^## \[Unreleased\]/ {
+              print $0
+              print ""
+              in_unreleased = 1
+              next
+            }
+            /^## \[/ && in_unreleased {
+              # Found next version section, output new version with collected content
+              print "## [" version "] - " date
+              print content
+              in_unreleased = 0
+            }
+            in_unreleased {
+              content = content $0 "\n"
+              next
+            }
+            { print }
+          ' CHANGELOG.md > CHANGELOG.md.tmp && mv CHANGELOG.md.tmp CHANGELOG.md
 
           # Update the links at the bottom
           # Change the Unreleased link to compare against the new version

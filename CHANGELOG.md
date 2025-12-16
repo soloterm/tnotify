@@ -12,9 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.4] - 2025-12-16
 
+### Fixed
+- Fixed GoReleaser homebrew_casks hooks syntax
+
 ## [0.1.3] - 2025-12-16
 
+### Fixed
+- Fixed GoReleaser homebrew_casks config for v2.13+
+
 ## [0.1.2] - 2025-12-16
+
+### Fixed
+- Fixed GoReleaser config syntax error
 
 ## [0.1.1] - 2025-12-16
 
