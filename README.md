@@ -1,6 +1,6 @@
 # tnotify
 
-Send desktop notifications from the terminal via OSC escape sequences or native tools.
+A standalone CLI tool to send desktop notifications from the terminal via OSC escape sequences or native tools.
 
 ## Features
 
