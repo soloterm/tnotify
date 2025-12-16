@@ -31,33 +31,33 @@ Download from [GitHub Releases](https://github.com/soloterm/tnotify/releases).
 
 ```bash
 # Simple notification
-tnotify "Build complete!"
+tnotify 'Build complete!'
 
 # With title
-tnotify -t "My App" "Task finished"
+tnotify -t 'My App' 'Task finished'
 
 # With urgency (low, normal, critical)
-tnotify -u critical "Server down!"
+tnotify -u critical 'Server down!'
 
 # Notification ID for updates (Kitty only)
-tnotify -i progress "Building... 50%"
-tnotify -i progress "Building... 100%"
+tnotify -i progress 'Building... 50%'
+tnotify -i progress 'Building... 100%'
 tnotify --close progress
 
 # Pipe input
-echo "Done" | tnotify -t "Results"
+echo 'Done' | tnotify -t 'Results'
 
 # Force specific method
-tnotify --osc "Uses escape sequences only"
-tnotify --native "Uses osascript/notify-send only"
+tnotify --osc 'Uses escape sequences only'
+tnotify --native 'Uses osascript/notify-send only'
 tnotify --bell  # Just beep
 
 # Show capabilities
 tnotify --capabilities
 
 # Exit code integration (auto-sets urgency)
-make build; tnotify -e $? "Build finished"      # critical if failed
-make test; tnotify -e $? --if-failed "Tests failed!"  # only notify on failure
+make build; tnotify -e $? 'Build finished'      # critical if failed
+make test; tnotify -e $? --if-failed 'Tests failed!'  # only notify on failure
 ```
 
 ## Terminal Support
@@ -78,13 +78,13 @@ Use `-e` / `--exit-code` to pass the previous command's exit code:
 
 ```bash
 # Notify with auto-urgency (critical if non-zero)
-long-running-task; tnotify -e $? "Task complete"
+long-running-task; tnotify -e $? 'Task complete'
 
 # Only notify on failure
-make test; tnotify -e $? --if-failed "Tests failed!"
+make test; tnotify -e $? --if-failed 'Tests failed!'
 
 # Combine with title
-./deploy.sh; tnotify -e $? -t "Deploy" "Finished"
+./deploy.sh; tnotify -e $? -t 'Deploy' 'Finished'
 ```
 
 | Exit Code | Urgency |
@@ -111,7 +111,7 @@ Some terminals suppress notifications when the terminal window is focused. This 
 To test notifications, switch to another window first:
 
 ```bash
-sleep 3 && tnotify "Hello!"  # Switch windows during the sleep
+sleep 3 && tnotify 'Hello!'  # Switch windows during the sleep
 ```
 
 ## License
