@@ -102,35 +102,17 @@ When OSC notifications aren't supported, tnotify falls back to:
 - **Linux**: `notify-send` (libnotify)
 - **Windows**: PowerShell toast notifications
 
-## Releasing (Maintainers)
+## Troubleshooting
 
-### First-time Homebrew Setup
+**Notification doesn't appear?**
 
-1. **Create the tap repository**: Create `soloterm/homebrew-tap` on GitHub (public repo)
+Some terminals suppress notifications when the terminal window is focused. This is intentional — you don't need a notification for something you're already looking at.
 
-2. **Create a Personal Access Token**:
-   - Go to GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens
-   - Create token with:
-     - Repository access: `soloterm/homebrew-tap` only
-     - Permissions: Contents (Read and write)
-   - Copy the token
+To test notifications, switch to another window first:
 
-3. **Add the secret to tnotify repo**:
-   - Go to `soloterm/tnotify` → Settings → Secrets and variables → Actions
-   - Add new repository secret: `HOMEBREW_TAP_GITHUB_TOKEN` with the token value
-
-### Creating a Release
-
-1. Go to Actions → Release → Run workflow
-2. Enter version in `X.Y.Z` format (e.g., `1.0.0`)
-3. Click "Run workflow"
-
-This will:
-- Validate the version format
-- Create and push a git tag (`v1.0.0`)
-- Build binaries for all platforms
-- Create a GitHub release with artifacts
-- Update the Homebrew formula in `soloterm/homebrew-tap`
+```bash
+sleep 3 && tnotify "Hello!"  # Switch windows during the sleep
+```
 
 ## License
 
