@@ -57,7 +57,7 @@ release:
 
     **Full Changelog**: https://github.com/soloterm/tnotify/blob/main/CHANGELOG.md
 
-homebrew_casks:
+brews:
   - name: tnotify
     repository:
       owner: soloterm
@@ -68,7 +68,6 @@ homebrew_casks:
       email: bot@goreleaser.com
     homepage: "https://github.com/soloterm/tnotify"
     description: "Send desktop notifications from the terminal via OSC sequences or native tools"
-    hooks:
-      post:
-        install: |
-          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}"]
+    license: "MIT"
+    install: |
+      bin.install "tnotify"
