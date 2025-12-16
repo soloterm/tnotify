@@ -70,6 +70,9 @@ tnotify --progress-clear             # Clear progress bar
 # Request attention (iTerm2 - bounces dock icon)
 tnotify --attention
 tnotify --fireworks  # With fireworks animation
+
+# Check version and for updates
+tnotify --version
 ```
 
 ## Terminal Support
@@ -109,7 +112,7 @@ The `--if-failed` flag skips the notification entirely if the exit code is 0.
 
 ## Progress Bars
 
-Show progress in terminal tabs or taskbar (Windows Terminal, Ghostty, ConEmu):
+Show progress in terminal tabs or taskbar. Only supported by Windows Terminal and Ghostty (1.2+). On unsupported terminals, `-p` prints plain text instead.
 
 ```bash
 # Normal progress (green)
@@ -134,6 +137,8 @@ tnotify --progress-clear
 | `error` | Red progress bar |
 | `paused` | Yellow progress bar |
 | `indeterminate` | Pulsing/animated |
+
+The progress bar appears at the top of the terminal window (Ghostty) or in the taskbar (Windows Terminal). Use `tnotify --capabilities` to check if your terminal supports progress bars.
 
 ## Request Attention
 
