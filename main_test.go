@@ -500,7 +500,11 @@ func TestParseProgressState(t *testing.T) {
 	}
 }
 
-func TestProgressFlag(t *testing.T) {
+func TestProgressFlagSupported(t *testing.T) {
+	// Mock Ghostty terminal (supports progress)
+	os.Setenv("GHOSTTY_RESOURCES_DIR", "/tmp/ghostty")
+	defer os.Unsetenv("GHOSTTY_RESOURCES_DIR")
+
 	cmd := newTestCommand()
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
@@ -525,17 +529,53 @@ func TestProgressFlag(t *testing.T) {
 	stdout.ReadFrom(r)
 	output := stdout.String()
 
-	// On supported terminals, outputs OSC 9;4 sequence
-	// On unsupported terminals, outputs plain text
-	terminal := detect.DetectTerminal()
-	if detect.SupportsProgress(terminal) {
-		if !strings.Contains(output, "\x1b]9;4;") {
-			t.Errorf("-p 50 should output OSC 9;4 sequence on supported terminal, got: %q", output)
+	if !strings.Contains(output, "\x1b]9;4;") {
+		t.Errorf("-p 50 should output OSC 9;4 sequence on supported terminal, got: %q", output)
+	}
+}
+
+func TestProgressFlagUnsupported(t *testing.T) {
+	// Save and clear all terminal env vars that could indicate progress support
+	envVars := []string{"GHOSTTY_RESOURCES_DIR", "WT_SESSION", "TERM_PROGRAM"}
+	saved := make(map[string]string)
+	for _, v := range envVars {
+		saved[v] = os.Getenv(v)
+		os.Unsetenv(v)
+	}
+	defer func() {
+		for k, v := range saved {
+			if v != "" {
+				os.Setenv(k, v)
+			}
 		}
-	} else {
-		if output != "Progress: 50%\n" {
-			t.Errorf("-p 50 should output plain text on unsupported terminal, got: %q", output)
-		}
+	}()
+
+	cmd := newTestCommand()
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{"-p", "50"})
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := cmd.Execute()
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	if err != nil {
+		t.Fatalf("-p 50 returned error: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	stdout.ReadFrom(r)
+	output := stdout.String()
+
+	if output != "Progress: 50%\n" {
+		t.Errorf("-p 50 should output plain text on unsupported terminal, got: %q", output)
 	}
 }
 
