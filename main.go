@@ -400,7 +400,22 @@ func runDiagnose() error {
 		results = append(results, struct{ name, result string }{"Native", "skipped (unavailable)"})
 	}
 
-	// Test 3: Bell
+	// Test 3: Progress bar
+	fmt.Print("Testing progress bar (OSC 9;4)... ")
+	for i := 0; i <= 100; i += 10 {
+		sequence := osc.BuildOSC9Progress(osc.ProgressNormal, i)
+		sequence = osc.WrapForMultiplexer(sequence)
+		fmt.Print(sequence)
+		time.Sleep(100 * time.Millisecond)
+	}
+	// Clear progress
+	clearSeq := osc.BuildOSC9ProgressClear()
+	clearSeq = osc.WrapForMultiplexer(clearSeq)
+	fmt.Print(clearSeq)
+	fmt.Println("sent (check terminal tab/taskbar)")
+	results = append(results, struct{ name, result string }{"Progress", "sent"})
+
+	// Test 4: Bell
 	fmt.Print("Testing terminal bell... ")
 	fmt.Print("\x07")
 	fmt.Println("sent")
