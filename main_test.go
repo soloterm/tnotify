@@ -523,10 +523,19 @@ func TestProgressFlag(t *testing.T) {
 
 	var stdout bytes.Buffer
 	stdout.ReadFrom(r)
+	output := stdout.String()
 
-	// Should output OSC 9;4 sequence
-	if !strings.Contains(stdout.String(), "\x1b]9;4;") {
-		t.Errorf("-p 50 should output OSC 9;4 sequence, got: %q", stdout.String())
+	// On supported terminals, outputs OSC 9;4 sequence
+	// On unsupported terminals, outputs plain text
+	terminal := detect.DetectTerminal()
+	if detect.SupportsProgress(terminal) {
+		if !strings.Contains(output, "\x1b]9;4;") {
+			t.Errorf("-p 50 should output OSC 9;4 sequence on supported terminal, got: %q", output)
+		}
+	} else {
+		if output != "Progress: 50%\n" {
+			t.Errorf("-p 50 should output plain text on unsupported terminal, got: %q", output)
+		}
 	}
 }
 
