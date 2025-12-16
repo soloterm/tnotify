@@ -41,6 +41,7 @@ snapshot:
   version_template: "{{ incpatch .Version }}-next"
 
 changelog:
+  use: github
   sort: asc
   filters:
     exclude:
@@ -49,6 +50,12 @@ changelog:
       - '^ci:'
       - Merge pull request
       - Merge branch
+
+release:
+  footer: |
+    ---
+
+    **Full Changelog**: https://github.com/soloterm/tnotify/blob/main/CHANGELOG.md
 
 homebrew_casks:
   - name: tnotify

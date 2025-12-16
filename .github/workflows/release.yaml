@@ -28,6 +28,42 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Update CHANGELOG
+        run: |
+          VERSION="${{ inputs.version }}"
+          DATE=$(date +%Y-%m-%d)
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Check if [Unreleased] section exists
+          if ! grep -q "## \[Unreleased\]" CHANGELOG.md; then
+            echo "Error: CHANGELOG.md does not contain an [Unreleased] section"
+            exit 1
+          fi
+
+          # Replace [Unreleased] with the new version and date
+          sed -i "s/## \[Unreleased\]/## [Unreleased]\n\n## [$VERSION] - $DATE/" CHANGELOG.md
+
+          # Update the links at the bottom
+          # Change the Unreleased link to compare against the new version
+          sed -i "s|\[Unreleased\]: \(.*\)/compare/v[0-9.]*\.\.\.HEAD|[Unreleased]: \1/compare/v$VERSION...HEAD|" CHANGELOG.md
+
+          # Add the new version link before the previous version link
+          PREV_VERSION=$(grep -oP '\[\d+\.\d+\.\d+\](?=:)' CHANGELOG.md | head -1 | tr -d '[]')
+          if [ -n "$PREV_VERSION" ]; then
+            sed -i "/^\[$PREV_VERSION\]:/i [$VERSION]: https://github.com/soloterm/tnotify/compare/v$PREV_VERSION...v$VERSION" CHANGELOG.md
+          else
+            # First release after initial
+            echo "[$VERSION]: https://github.com/soloterm/tnotify/releases/tag/v$VERSION" >> CHANGELOG.md
+          fi
+
+          # Commit the changelog update
+          git add CHANGELOG.md
+          git commit -m "Release v$VERSION"
+          git push
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -35,8 +71,6 @@ jobs:
 
       - name: Create and push tag
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
           git push origin "v${{ inputs.version }}"
 

@@ -60,20 +60,30 @@ tnotify --diagnose
 
 # Exit code integration (auto-sets urgency)
 make build; tnotify -e $? 'Build finished'      # critical if failed
-make test; tnotify -e $? --if-failed 'Tests failed!'  # only notify on failure
+make test; tnotify -e $? --if-failed 'Tests failed!'
+
+# Progress bar in terminal tab/taskbar (Windows Terminal, Ghostty)
+tnotify -p 50                        # 50% progress
+tnotify -p 100 --progress-state error  # Red/error state at 100%
+tnotify --progress-clear             # Clear progress bar
+
+# Request attention (iTerm2 - bounces dock icon)
+tnotify --attention
+tnotify --fireworks  # With fireworks animation
 ```
 
 ## Terminal Support
 
-| Terminal | Protocol | Title | Urgency | IDs |
-|----------|----------|-------|---------|-----|
-| Kitty | OSC 99 | ✓ | ✓ | ✓ |
-| iTerm2 | OSC 9 | ✗ | ✗ | ✗ |
-| WezTerm | OSC 777 | ✓ | ✗ | ✗ |
-| Ghostty | OSC 777 | ✓ | ✗ | ✗ |
-| VTE (GNOME Terminal) | OSC 777 | ✓ | ✗ | ✗ |
-| foot | OSC 777 | ✓ | ✗ | ✗ |
-| Others | Native fallback | ✓ | ✓ | ✗ |
+| Terminal | Protocol | Title | Urgency | IDs | Progress | Attention |
+|----------|----------|-------|---------|-----|----------|-----------|
+| Kitty | OSC 99 | ✓ | ✓ | ✓ | ✗ | ✗ |
+| iTerm2 | OSC 9 | ✗ | ✗ | ✗ | ✗ | ✓ |
+| WezTerm | OSC 777 | ✓ | ✗ | ✗ | ✗ | ✗ |
+| Ghostty | OSC 777 | ✓ | ✗ | ✗ | ✓ | ✗ |
+| Windows Terminal | OSC 9 | ✗ | ✗ | ✗ | ✓ | ✗ |
+| VTE (GNOME Terminal) | OSC 777 | ✓ | ✗ | ✗ | ✗ | ✗ |
+| foot | OSC 777 | ✓ | ✗ | ✗ | ✗ | ✗ |
+| Others | Native fallback | ✓ | ✓ | ✗ | ✗ | ✗ |
 
 ## Exit Code Integration
 
@@ -96,6 +106,43 @@ make test; tnotify -e $? --if-failed 'Tests failed!'
 | non-zero | critical |
 
 The `--if-failed` flag skips the notification entirely if the exit code is 0.
+
+## Progress Bars
+
+Show progress in terminal tabs or taskbar (Windows Terminal, Ghostty, ConEmu):
+
+```bash
+# Normal progress (green)
+tnotify -p 50
+
+# Error state (red)
+tnotify -p 100 --progress-state error
+
+# Paused state (yellow)
+tnotify -p 75 --progress-state paused
+
+# Indeterminate/pulsing
+tnotify -p 0 --progress-state indeterminate
+
+# Clear progress bar
+tnotify --progress-clear
+```
+
+| State | Description |
+|-------|-------------|
+| `normal` | Green progress bar (default) |
+| `error` | Red progress bar |
+| `paused` | Yellow progress bar |
+| `indeterminate` | Pulsing/animated |
+
+## Request Attention
+
+Bounce the dock icon or flash the taskbar (iTerm2):
+
+```bash
+tnotify --attention          # Standard attention request
+tnotify --fireworks          # With fireworks animation
+```
 
 ## Native Fallbacks
 
@@ -141,6 +188,20 @@ This will show your detected terminal, test each method, and report what works.
    ```
 
 6. **Windows: Focus Assist** — Windows Focus Assist (Do Not Disturb) blocks notifications. Check Settings → System → Focus Assist, or click the notification icon in the system tray.
+
+7. **VTE-based terminals (GNOME Terminal, Tilix)** — OSC 777 support requires Fedora's VTE patches or manual configuration. On Ubuntu/Arch, add to your `~/.bashrc` or `~/.zshrc`:
+   ```bash
+   if [ "$VTE_VERSION" ]; then
+       source /etc/profile.d/vte.sh 2>/dev/null
+   fi
+   ```
+
+8. **tmux passthrough** — OSC sequences require tmux 3.2+ with passthrough enabled:
+   ```bash
+   # Add to ~/.tmux.conf
+   set -g allow-passthrough on
+   ```
+   Run `tnotify --diagnose` inside tmux to check if passthrough is configured.
 
 ## License
 

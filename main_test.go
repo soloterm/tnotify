@@ -25,6 +25,11 @@ func newTestCommand() *cobra.Command {
 	exitCode = 0
 	useExitCode = false
 	diagnose = false
+	progress = -1
+	progressState = "normal"
+	clearProgress = false
+	attention = false
+	fireworks = false
 
 	cmd := &cobra.Command{
 		Use:     "tnotify [message]",
@@ -45,6 +50,11 @@ func newTestCommand() *cobra.Command {
 	cmd.Flags().IntVarP(&exitCode, "exit-code", "e", 0, "Previous command's exit code")
 	cmd.Flags().BoolVar(&useExitCode, "if-failed", false, "Only notify if exit code is non-zero")
 	cmd.Flags().BoolVar(&diagnose, "diagnose", false, "Test all notification methods")
+	cmd.Flags().IntVarP(&progress, "progress", "p", -1, "Show progress bar (0-100)")
+	cmd.Flags().StringVar(&progressState, "progress-state", "normal", "Progress state")
+	cmd.Flags().BoolVar(&clearProgress, "progress-clear", false, "Clear progress bar")
+	cmd.Flags().BoolVar(&attention, "attention", false, "Request attention")
+	cmd.Flags().BoolVar(&fireworks, "fireworks", false, "Request attention with fireworks")
 
 	return cmd
 }
@@ -437,5 +447,129 @@ func TestAvailableStr(t *testing.T) {
 	}
 	if availableStr(false) != "not available" {
 		t.Error("availableStr(false) should return 'not available'")
+	}
+}
+
+func TestParseProgressState(t *testing.T) {
+	tests := []struct {
+		input string
+		want  int
+	}{
+		{"normal", osc.ProgressNormal},
+		{"NORMAL", osc.ProgressNormal},
+		{"error", osc.ProgressError},
+		{"red", osc.ProgressError},
+		{"2", osc.ProgressError},
+		{"paused", osc.ProgressPaused},
+		{"yellow", osc.ProgressPaused},
+		{"4", osc.ProgressPaused},
+		{"indeterminate", osc.ProgressIndeterminate},
+		{"pulse", osc.ProgressIndeterminate},
+		{"3", osc.ProgressIndeterminate},
+		{"hidden", osc.ProgressHidden},
+		{"clear", osc.ProgressHidden},
+		{"0", osc.ProgressHidden},
+		{"unknown", osc.ProgressNormal}, // default
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := parseProgressState(tt.input)
+			if got != tt.want {
+				t.Errorf("parseProgressState(%q) = %d, want %d", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestProgressFlag(t *testing.T) {
+	cmd := newTestCommand()
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{"-p", "50"})
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := cmd.Execute()
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	if err != nil {
+		t.Fatalf("-p 50 returned error: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	stdout.ReadFrom(r)
+
+	// Should output OSC 9;4 sequence
+	if !strings.Contains(stdout.String(), "\x1b]9;4;") {
+		t.Errorf("-p 50 should output OSC 9;4 sequence, got: %q", stdout.String())
+	}
+}
+
+func TestAttentionFlag(t *testing.T) {
+	cmd := newTestCommand()
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{"--attention"})
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := cmd.Execute()
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	if err != nil {
+		t.Fatalf("--attention returned error: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	stdout.ReadFrom(r)
+
+	// Should output iTerm2 RequestAttention sequence
+	expected := "\x1b]1337;RequestAttention=yes\x07"
+	if stdout.String() != expected {
+		t.Errorf("--attention should output %q, got: %q", expected, stdout.String())
+	}
+}
+
+func TestFireworksFlag(t *testing.T) {
+	cmd := newTestCommand()
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{"--fireworks"})
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := cmd.Execute()
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	if err != nil {
+		t.Fatalf("--fireworks returned error: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	stdout.ReadFrom(r)
+
+	// Should output iTerm2 RequestAttention=fireworks sequence
+	expected := "\x1b]1337;RequestAttention=fireworks\x07"
+	if stdout.String() != expected {
+		t.Errorf("--fireworks should output %q, got: %q", expected, stdout.String())
 	}
 }

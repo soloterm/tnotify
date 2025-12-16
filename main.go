@@ -32,6 +32,13 @@ var (
 	exitCode    int
 	useExitCode bool
 	diagnose    bool
+	// Progress bar flags
+	progress      int
+	progressState string
+	clearProgress bool
+	// Attention flags
+	attention bool
+	fireworks bool
 )
 
 func main() {
@@ -71,6 +78,13 @@ OSC sequences work over SSH and inside tmux/screen!`,
 	rootCmd.Flags().IntVarP(&exitCode, "exit-code", "e", 0, "Previous command's exit code (sets urgency automatically)")
 	rootCmd.Flags().BoolVar(&useExitCode, "if-failed", false, "Only notify if exit code is non-zero (use with -e)")
 	rootCmd.Flags().BoolVar(&diagnose, "diagnose", false, "Test all notification methods to see what works")
+	// Progress bar flags
+	rootCmd.Flags().IntVarP(&progress, "progress", "p", -1, "Show progress bar (0-100) in terminal tab/taskbar")
+	rootCmd.Flags().StringVar(&progressState, "progress-state", "normal", "Progress state: normal, error, paused, indeterminate")
+	rootCmd.Flags().BoolVar(&clearProgress, "progress-clear", false, "Clear/hide progress bar")
+	// Attention flags
+	rootCmd.Flags().BoolVar(&attention, "attention", false, "Request attention (bounces dock icon on macOS/iTerm2)")
+	rootCmd.Flags().BoolVar(&fireworks, "fireworks", false, "Request attention with fireworks animation (iTerm2)")
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
@@ -96,6 +110,31 @@ func run(cmd *cobra.Command, args []string) error {
 	// Handle --bell
 	if forceBell {
 		fmt.Print("\x07")
+		return nil
+	}
+
+	// Handle --progress-clear
+	if clearProgress {
+		sequence := osc.BuildOSC9ProgressClear()
+		sequence = osc.WrapForMultiplexer(sequence)
+		fmt.Print(sequence)
+		return nil
+	}
+
+	// Handle --progress
+	if progress >= 0 {
+		state := parseProgressState(progressState)
+		sequence := osc.BuildOSC9Progress(state, progress)
+		sequence = osc.WrapForMultiplexer(sequence)
+		fmt.Print(sequence)
+		return nil
+	}
+
+	// Handle --attention or --fireworks
+	if attention || fireworks {
+		sequence := osc.BuildITermRequestAttention(fireworks)
+		sequence = osc.WrapForMultiplexer(sequence)
+		fmt.Print(sequence)
 		return nil
 	}
 
@@ -160,6 +199,21 @@ func urgencyFromExitCode(code int) int {
 		return osc.UrgencyNormal
 	}
 	return osc.UrgencyCritical
+}
+
+func parseProgressState(s string) int {
+	switch strings.ToLower(s) {
+	case "error", "red", "2":
+		return osc.ProgressError
+	case "paused", "yellow", "4":
+		return osc.ProgressPaused
+	case "indeterminate", "pulse", "3":
+		return osc.ProgressIndeterminate
+	case "hidden", "clear", "0":
+		return osc.ProgressHidden
+	default:
+		return osc.ProgressNormal
+	}
 }
 
 func sendOSC(message, title string, urgency int, id string) error {
@@ -257,7 +311,19 @@ func runDiagnose() error {
 	fmt.Printf("Selected protocol: %s\n", protocolName(protocol))
 	if inMux {
 		if detect.InTmux() {
-			fmt.Println("Multiplexer: tmux (will use passthrough)")
+			version := detect.TmuxVersion()
+			passthrough := detect.TmuxAllowPassthrough()
+			supportsPassthrough := detect.TmuxSupportsPassthrough()
+
+			fmt.Printf("Multiplexer: %s\n", version)
+			if !supportsPassthrough {
+				fmt.Println("  WARNING: tmux < 3.2 does not support allow-passthrough")
+			} else if passthrough == "" || passthrough == "off" {
+				fmt.Println("  WARNING: allow-passthrough is off")
+				fmt.Println("  Enable with: tmux set -g allow-passthrough on")
+			} else {
+				fmt.Printf("  allow-passthrough: %s\n", passthrough)
+			}
 		} else {
 			fmt.Println("Multiplexer: GNU Screen (will use passthrough)")
 		}
