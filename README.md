@@ -163,6 +163,12 @@ tnotify --attention          # Standard attention request
 tnotify --fireworks          # With fireworks animation
 ```
 
+### Fireworks
+
+![Fireworks animation in iTerm2](art/fireworks.png)
+
+I have no idea why you'd use this, but here we are.
+
 ## Native Fallbacks
 
 When OSC notifications aren't supported, tnotify falls back to:
