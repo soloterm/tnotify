@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -39,6 +40,8 @@ var (
 	// Attention flags
 	attention bool
 	fireworks bool
+	// Version flag
+	checkVersion bool
 )
 
 func main() {
@@ -62,10 +65,12 @@ OSC sequences work over SSH and inside tmux/screen!`,
   echo "Done" | tnotify -t "Results"
   make build; tnotify -e $? "Build finished"
   make test; tnotify -e $? --if-failed "Tests failed!"`,
-		Version: fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date),
-		Args:    cobra.MaximumNArgs(1),
-		RunE:    run,
+		Args: cobra.MaximumNArgs(1),
+		RunE: run,
 	}
+
+	// Disable Cobra's built-in version flag so we can use our own
+	rootCmd.SetVersionTemplate("")
 
 	rootCmd.Flags().StringVarP(&title, "title", "t", "", "Notification title")
 	rootCmd.Flags().StringVarP(&urgency, "urgency", "u", "normal", "Urgency level: low, normal, critical")
@@ -85,6 +90,7 @@ OSC sequences work over SSH and inside tmux/screen!`,
 	// Attention flags
 	rootCmd.Flags().BoolVar(&attention, "attention", false, "Request attention (bounces dock icon on macOS/iTerm2)")
 	rootCmd.Flags().BoolVar(&fireworks, "fireworks", false, "Request attention with fireworks animation (iTerm2)")
+	rootCmd.Flags().BoolVarP(&checkVersion, "version", "v", false, "Show version and check for updates")
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
@@ -92,6 +98,11 @@ OSC sequences work over SSH and inside tmux/screen!`,
 }
 
 func run(cmd *cobra.Command, args []string) error {
+	// Handle --version / -V
+	if checkVersion {
+		return showVersion()
+	}
+
 	// Handle --diagnose
 	if diagnose {
 		return runDiagnose()
@@ -445,4 +456,73 @@ func availableStr(available bool) string {
 		return "available"
 	}
 	return "not available"
+}
+
+func showVersion() error {
+	fmt.Printf("tnotify %s\n", version)
+	if commit != "none" {
+		fmt.Printf("  commit: %s\n", commit)
+	}
+	if date != "unknown" {
+		fmt.Printf("  built:  %s\n", date)
+	}
+	fmt.Println()
+
+	// Check for latest version on GitHub
+	fmt.Print("Checking for updates... ")
+
+	latest, err := getLatestVersion()
+	if err != nil {
+		fmt.Printf("failed (%v)\n", err)
+		return nil
+	}
+
+	// Compare versions (strip 'v' prefix if present)
+	currentClean := strings.TrimPrefix(version, "v")
+	latestClean := strings.TrimPrefix(latest, "v")
+
+	if currentClean == "dev" {
+		fmt.Printf("latest is %s (you're running a dev build)\n", latest)
+	} else if currentClean == latestClean {
+		fmt.Printf("you're up to date (%s)\n", latest)
+	} else {
+		fmt.Printf("update available!\n")
+		fmt.Printf("\n  Current: %s\n", version)
+		fmt.Printf("  Latest:  %s\n", latest)
+		fmt.Println()
+		fmt.Println("Update with: brew upgrade tnotify")
+	}
+
+	return nil
+}
+
+func getLatestVersion() (string, error) {
+	// Use GitHub API to get latest release
+	// This endpoint redirects to the latest release, we just need the tag
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse // Don't follow redirects
+		},
+	}
+
+	resp, err := client.Get("https://github.com/soloterm/tnotify/releases/latest")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	// The Location header contains the redirect URL with the version tag
+	location := resp.Header.Get("Location")
+	if location == "" {
+		return "", fmt.Errorf("no releases found")
+	}
+
+	// Extract version from URL like: https://github.com/soloterm/tnotify/releases/tag/v0.1.0
+	parts := strings.Split(location, "/tag/")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("unexpected redirect URL format")
+	}
+
+	return parts[1], nil
 }

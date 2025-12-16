@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Version check with `--version` / `-v` that shows current version and checks GitHub for updates
 - Progress bar support via OSC 9;4 (`-p`, `--progress-state`, `--progress-clear`)
   - Supported by Windows Terminal, Ghostty, ConEmu, Mintty
   - States: normal (green), error (red), paused (yellow), indeterminate

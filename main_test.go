@@ -30,14 +30,15 @@ func newTestCommand() *cobra.Command {
 	clearProgress = false
 	attention = false
 	fireworks = false
+	checkVersion = false
 
 	cmd := &cobra.Command{
-		Use:     "tnotify [message]",
-		Short:   "Send desktop notifications from the terminal",
-		Version: "test",
-		Args:    cobra.MaximumNArgs(1),
-		RunE:    run,
+		Use:   "tnotify [message]",
+		Short: "Send desktop notifications from the terminal",
+		Args:  cobra.MaximumNArgs(1),
+		RunE:  run,
 	}
+	cmd.SetVersionTemplate("")
 
 	cmd.Flags().StringVarP(&title, "title", "t", "", "Notification title")
 	cmd.Flags().StringVarP(&urgency, "urgency", "u", "normal", "Urgency level: low, normal, critical")
@@ -55,6 +56,7 @@ func newTestCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&clearProgress, "progress-clear", false, "Clear progress bar")
 	cmd.Flags().BoolVar(&attention, "attention", false, "Request attention")
 	cmd.Flags().BoolVar(&fireworks, "fireworks", false, "Request attention with fireworks")
+	cmd.Flags().BoolVarP(&checkVersion, "version", "v", false, "Show version and check for updates")
 
 	return cmd
 }
@@ -118,14 +120,30 @@ func TestCommandVersion(t *testing.T) {
 	cmd.SetErr(buf)
 	cmd.SetArgs([]string{"--version"})
 
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
 	err := cmd.Execute()
+
+	w.Close()
+	os.Stdout = oldStdout
+
 	if err != nil {
 		t.Fatalf("--version returned error: %v", err)
 	}
 
-	output := buf.String()
-	if !strings.Contains(output, "test") {
-		t.Errorf("Version output should contain 'test', got: %s", output)
+	var stdout bytes.Buffer
+	stdout.ReadFrom(r)
+	output := stdout.String()
+
+	// Should contain version info (dev in tests)
+	if !strings.Contains(output, "tnotify") {
+		t.Errorf("Version output should contain 'tnotify', got: %s", output)
+	}
+	if !strings.Contains(output, "Checking for updates") {
+		t.Errorf("Version output should check for updates, got: %s", output)
 	}
 }
 
