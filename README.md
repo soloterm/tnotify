@@ -54,6 +54,10 @@ tnotify --bell  # Just beep
 
 # Show capabilities
 tnotify --capabilities
+
+# Exit code integration (auto-sets urgency)
+make build; tnotify -e $? "Build finished"      # critical if failed
+make test; tnotify -e $? --if-failed "Tests failed!"  # only notify on failure
 ```
 
 ## Terminal Support
@@ -67,6 +71,28 @@ tnotify --capabilities
 | VTE (GNOME Terminal) | OSC 777 | ✓ | ✗ | ✗ |
 | foot | OSC 777 | ✓ | ✗ | ✗ |
 | Others | Native fallback | ✓ | ✓ | ✗ |
+
+## Exit Code Integration
+
+Use `-e` / `--exit-code` to pass the previous command's exit code:
+
+```bash
+# Notify with auto-urgency (critical if non-zero)
+long-running-task; tnotify -e $? "Task complete"
+
+# Only notify on failure
+make test; tnotify -e $? --if-failed "Tests failed!"
+
+# Combine with title
+./deploy.sh; tnotify -e $? -t "Deploy" "Finished"
+```
+
+| Exit Code | Urgency |
+|-----------|---------|
+| 0 | normal |
+| non-zero | critical |
+
+The `--if-failed` flag skips the notification entirely if the exit code is 0.
 
 ## Native Fallbacks
 

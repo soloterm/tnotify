@@ -21,6 +21,8 @@ func newTestCommand() *cobra.Command {
 	forceNative = false
 	forceBell = false
 	showCaps = false
+	exitCode = 0
+	useExitCode = false
 
 	cmd := &cobra.Command{
 		Use:     "tnotify [message]",
@@ -38,6 +40,8 @@ func newTestCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&forceNative, "native", false, "Force native notifications only")
 	cmd.Flags().BoolVar(&forceBell, "bell", false, "Send terminal bell only")
 	cmd.Flags().BoolVar(&showCaps, "capabilities", false, "Show terminal capabilities as JSON")
+	cmd.Flags().IntVarP(&exitCode, "exit-code", "e", 0, "Previous command's exit code")
+	cmd.Flags().BoolVar(&useExitCode, "if-failed", false, "Only notify if exit code is non-zero")
 
 	return cmd
 }
@@ -261,5 +265,112 @@ func TestFlagMutualExclusion(t *testing.T) {
 				t.Errorf("Failed to parse flags: %v", err)
 			}
 		})
+	}
+}
+
+func TestUrgencyFromExitCode(t *testing.T) {
+	tests := []struct {
+		name     string
+		exitCode int
+		want     int
+	}{
+		{"exit 0 is normal", 0, osc.UrgencyNormal},
+		{"exit 1 is critical", 1, osc.UrgencyCritical},
+		{"exit 2 is critical", 2, osc.UrgencyCritical},
+		{"exit 127 is critical", 127, osc.UrgencyCritical},
+		{"exit 255 is critical", 255, osc.UrgencyCritical},
+		{"negative exit code is critical", -1, osc.UrgencyCritical},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := urgencyFromExitCode(tt.exitCode)
+			if got != tt.want {
+				t.Errorf("urgencyFromExitCode(%d) = %d, want %d", tt.exitCode, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExitCodeFlag(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{"short flag", []string{"-e", "0", "msg"}},
+		{"long flag", []string{"--exit-code", "1", "msg"}},
+		{"with if-failed", []string{"-e", "1", "--if-failed", "msg"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := newTestCommand()
+			cmd.SetArgs(tt.args)
+
+			err := cmd.ParseFlags(tt.args)
+			if err != nil {
+				t.Errorf("Failed to parse flags: %v", err)
+			}
+		})
+	}
+}
+
+func TestIfFailedSkipsOnSuccess(t *testing.T) {
+	cmd := newTestCommand()
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{"-e", "0", "--if-failed", "This should not notify"})
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := cmd.Execute()
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	if err != nil {
+		t.Fatalf("--if-failed with exit 0 returned error: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	stdout.ReadFrom(r)
+
+	// Should produce no output (notification skipped)
+	if stdout.String() != "" {
+		t.Errorf("--if-failed with exit 0 should produce no output, got: %q", stdout.String())
+	}
+}
+
+func TestIfFailedNotifiesOnFailure(t *testing.T) {
+	cmd := newTestCommand()
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{"-e", "1", "--if-failed", "--bell", "Build failed"})
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := cmd.Execute()
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	if err != nil {
+		t.Fatalf("--if-failed with exit 1 returned error: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	stdout.ReadFrom(r)
+
+	// Should produce bell output (notification sent)
+	if stdout.String() != "\x07" {
+		t.Errorf("--if-failed with exit 1 should produce bell, got: %q", stdout.String())
 	}
 }

@@ -20,14 +20,16 @@ var (
 )
 
 var (
-	title      string
-	urgency    string
-	id         string
-	closeID    string
-	forceOSC   bool
+	title       string
+	urgency     string
+	id          string
+	closeID     string
+	forceOSC    bool
 	forceNative bool
-	forceBell  bool
-	showCaps   bool
+	forceBell   bool
+	showCaps    bool
+	exitCode    int
+	useExitCode bool
 )
 
 func main() {
@@ -48,7 +50,9 @@ OSC sequences work over SSH and inside tmux/screen!`,
   tnotify -u critical "Server down!"
   tnotify -i progress "Building... 50%"
   tnotify --close progress
-  echo "Done" | tnotify -t "Results"`,
+  echo "Done" | tnotify -t "Results"
+  make build; tnotify -e $? "Build finished"
+  make test; tnotify -e $? --if-failed "Tests failed!"`,
 		Version: fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date),
 		Args:    cobra.MaximumNArgs(1),
 		RunE:    run,
@@ -62,6 +66,8 @@ OSC sequences work over SSH and inside tmux/screen!`,
 	rootCmd.Flags().BoolVar(&forceNative, "native", false, "Force native notifications only")
 	rootCmd.Flags().BoolVar(&forceBell, "bell", false, "Send terminal bell only")
 	rootCmd.Flags().BoolVar(&showCaps, "capabilities", false, "Show terminal capabilities as JSON")
+	rootCmd.Flags().IntVarP(&exitCode, "exit-code", "e", 0, "Previous command's exit code (sets urgency automatically)")
+	rootCmd.Flags().BoolVar(&useExitCode, "if-failed", false, "Only notify if exit code is non-zero (use with -e)")
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
@@ -82,6 +88,11 @@ func run(cmd *cobra.Command, args []string) error {
 	// Handle --bell
 	if forceBell {
 		fmt.Print("\x07")
+		return nil
+	}
+
+	// Handle --if-failed: skip notification if exit code is 0
+	if useExitCode && exitCode == 0 {
 		return nil
 	}
 
@@ -106,8 +117,11 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no message provided")
 	}
 
-	// Parse urgency
+	// Parse urgency (exit code overrides if provided via -e flag)
 	urgencyLevel := parseUrgency(urgency)
+	if cmd.Flags().Changed("exit-code") {
+		urgencyLevel = urgencyFromExitCode(exitCode)
+	}
 
 	// Send notification
 	if forceNative {
@@ -131,6 +145,13 @@ func parseUrgency(u string) int {
 	default:
 		return osc.UrgencyNormal
 	}
+}
+
+func urgencyFromExitCode(code int) int {
+	if code == 0 {
+		return osc.UrgencyNormal
+	}
+	return osc.UrgencyCritical
 }
 
 func sendOSC(message, title string, urgency int, id string) error {
