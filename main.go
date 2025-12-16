@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/soloterm/tnotify/internal/detect"
 	"github.com/soloterm/tnotify/internal/native"
@@ -30,6 +31,7 @@ var (
 	showCaps    bool
 	exitCode    int
 	useExitCode bool
+	diagnose    bool
 )
 
 func main() {
@@ -68,6 +70,7 @@ OSC sequences work over SSH and inside tmux/screen!`,
 	rootCmd.Flags().BoolVar(&showCaps, "capabilities", false, "Show terminal capabilities as JSON")
 	rootCmd.Flags().IntVarP(&exitCode, "exit-code", "e", 0, "Previous command's exit code (sets urgency automatically)")
 	rootCmd.Flags().BoolVar(&useExitCode, "if-failed", false, "Only notify if exit code is non-zero (use with -e)")
+	rootCmd.Flags().BoolVar(&diagnose, "diagnose", false, "Test all notification methods to see what works")
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
@@ -75,6 +78,11 @@ OSC sequences work over SSH and inside tmux/screen!`,
 }
 
 func run(cmd *cobra.Command, args []string) error {
+	// Handle --diagnose
+	if diagnose {
+		return runDiagnose()
+	}
+
 	// Handle --capabilities
 	if showCaps {
 		return showCapabilities()
@@ -234,4 +242,141 @@ func showCapabilities() error {
 
 	fmt.Println(string(data))
 	return nil
+}
+
+func runDiagnose() error {
+	terminal := detect.DetectTerminal()
+	protocol := detect.SelectProtocol(terminal)
+	inMux := detect.InMultiplexer()
+	nativeAvail := native.IsAvailable()
+
+	// Print environment info
+	fmt.Println("=== tnotify diagnostic ===")
+	fmt.Println()
+	fmt.Printf("Detected terminal: %s\n", terminalName(terminal))
+	fmt.Printf("Selected protocol: %s\n", protocolName(protocol))
+	if inMux {
+		if detect.InTmux() {
+			fmt.Println("Multiplexer: tmux (will use passthrough)")
+		} else {
+			fmt.Println("Multiplexer: GNU Screen (will use passthrough)")
+		}
+	}
+	fmt.Printf("Native notifications: %s\n", availableStr(nativeAvail))
+	fmt.Println()
+
+	// Warning about focus
+	fmt.Println("IMPORTANT: Many terminals suppress notifications when focused.")
+	fmt.Println("Please switch to another window NOW.")
+	fmt.Println()
+
+	// Countdown
+	fmt.Print("Testing in: ")
+	for i := 3; i > 0; i-- {
+		fmt.Printf("%d... ", i)
+		time.Sleep(1 * time.Second)
+	}
+	fmt.Println("Go!")
+	fmt.Println()
+
+	// Test methods
+	results := []struct {
+		name   string
+		result string
+	}{}
+
+	// Test 1: OSC (if available)
+	if protocol != detect.ProtocolNone {
+		fmt.Printf("Testing %s... ", protocolName(protocol))
+		var sequence string
+		switch protocol {
+		case detect.ProtocolOSC9:
+			sequence = osc.BuildOSC9("tnotify test: OSC 9")
+		case detect.ProtocolOSC777:
+			sequence = osc.BuildOSC777("tnotify test: OSC 777", "tnotify")
+		case detect.ProtocolOSC99:
+			sequence = osc.BuildOSC99("tnotify test: OSC 99", "tnotify", osc.UrgencyNormal, "")
+		}
+		sequence = osc.WrapForMultiplexer(sequence)
+		fmt.Print(sequence)
+		fmt.Println("sent")
+		results = append(results, struct{ name, result string }{protocolName(protocol), "sent"})
+		time.Sleep(2 * time.Second)
+	} else {
+		fmt.Println("Skipping OSC: no protocol detected for this terminal")
+		results = append(results, struct{ name, result string }{"OSC", "skipped (unsupported terminal)"})
+	}
+
+	// Test 2: Native
+	if nativeAvail {
+		fmt.Print("Testing native notifications... ")
+		if native.Send("tnotify test: native notification", "tnotify", osc.UrgencyNormal) {
+			fmt.Println("sent")
+			results = append(results, struct{ name, result string }{"Native", "sent"})
+		} else {
+			fmt.Println("failed")
+			results = append(results, struct{ name, result string }{"Native", "failed"})
+		}
+		time.Sleep(2 * time.Second)
+	} else {
+		fmt.Println("Skipping native: not available on this system")
+		results = append(results, struct{ name, result string }{"Native", "skipped (unavailable)"})
+	}
+
+	// Test 3: Bell
+	fmt.Print("Testing terminal bell... ")
+	fmt.Print("\x07")
+	fmt.Println("sent")
+	results = append(results, struct{ name, result string }{"Bell", "sent"})
+
+	// Summary
+	fmt.Println()
+	fmt.Println("=== Summary ===")
+	fmt.Println()
+	for _, r := range results {
+		status := "?"
+		if r.result == "sent" {
+			status = "✓"
+		} else if r.result == "failed" || strings.HasPrefix(r.result, "skipped") {
+			status = "✗"
+		}
+		fmt.Printf("  %s %s: %s\n", status, r.name, r.result)
+	}
+	fmt.Println()
+	fmt.Println("Did you see/hear the notifications?")
+	fmt.Println("If not, your terminal may not support them or may suppress")
+	fmt.Println("notifications when focused. Try running a command like:")
+	fmt.Println()
+	fmt.Println("  sleep 3 && tnotify 'Hello!'")
+	fmt.Println()
+	fmt.Println("and switch to another window during the countdown.")
+
+	return nil
+}
+
+func terminalName(t detect.Terminal) string {
+	if t == detect.TerminalUnknown {
+		return "unknown"
+	}
+	return string(t)
+}
+
+func protocolName(p detect.Protocol) string {
+	switch p {
+	case detect.ProtocolOSC9:
+		return "OSC 9 (iTerm2)"
+	case detect.ProtocolOSC777:
+		return "OSC 777 (WezTerm/Ghostty/VTE)"
+	case detect.ProtocolOSC99:
+		return "OSC 99 (Kitty)"
+	default:
+		return "none"
+	}
+}
+
+func availableStr(available bool) string {
+	if available {
+		return "available"
+	}
+	return "not available"
 }

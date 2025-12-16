@@ -55,6 +55,9 @@ tnotify --bell  # Just beep
 # Show capabilities
 tnotify --capabilities
 
+# Diagnose notification issues
+tnotify --diagnose
+
 # Exit code integration (auto-sets urgency)
 make build; tnotify -e $? 'Build finished'      # critical if failed
 make test; tnotify -e $? --if-failed 'Tests failed!'  # only notify on failure
@@ -106,13 +109,38 @@ When OSC notifications aren't supported, tnotify falls back to:
 
 **Notification doesn't appear?**
 
-Some terminals suppress notifications when the terminal window is focused. This is intentional — you don't need a notification for something you're already looking at.
-
-To test notifications, switch to another window first:
+Run the diagnostic command to test all notification methods:
 
 ```bash
-sleep 3 && tnotify 'Hello!'  # Switch windows during the sleep
+tnotify --diagnose
 ```
+
+This will show your detected terminal, test each method, and report what works.
+
+**Common issues:**
+
+1. **macOS Focus Mode** — If you're using Focus/Do Not Disturb, your terminal app must be added to the allowed apps list. Go to System Settings → Focus → [Your Focus Mode] → Allowed Apps and add Ghostty, iTerm2, or your terminal.
+
+2. **Terminal is focused** — Many terminals suppress notifications when the terminal window is focused. This is intentional. Test by switching to another window:
+   ```bash
+   sleep 3 && tnotify 'Hello!'  # Switch windows during the sleep
+   ```
+
+3. **Notification permissions** — Check System Settings → Notifications and ensure your terminal app has notifications enabled with "Banners" or "Alerts" style.
+
+4. **Native fallback on macOS** — Native notifications use `osascript`, which sends notifications as "Script Editor". Enable notifications for Script Editor in System Settings → Notifications.
+
+5. **Linux: notify-send not installed** — The native fallback requires `libnotify`. Install it with:
+   ```bash
+   # Debian/Ubuntu
+   sudo apt install libnotify-bin
+   # Fedora
+   sudo dnf install libnotify
+   # Arch
+   sudo pacman -S libnotify
+   ```
+
+6. **Windows: Focus Assist** — Windows Focus Assist (Do Not Disturb) blocks notifications. Check Settings → System → Focus Assist, or click the notification icon in the system tray.
 
 ## License
 

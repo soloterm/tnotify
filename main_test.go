@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/soloterm/tnotify/internal/detect"
 	"github.com/soloterm/tnotify/internal/osc"
 	"github.com/spf13/cobra"
 )
@@ -23,6 +24,7 @@ func newTestCommand() *cobra.Command {
 	showCaps = false
 	exitCode = 0
 	useExitCode = false
+	diagnose = false
 
 	cmd := &cobra.Command{
 		Use:     "tnotify [message]",
@@ -42,6 +44,7 @@ func newTestCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&showCaps, "capabilities", false, "Show terminal capabilities as JSON")
 	cmd.Flags().IntVarP(&exitCode, "exit-code", "e", 0, "Previous command's exit code")
 	cmd.Flags().BoolVar(&useExitCode, "if-failed", false, "Only notify if exit code is non-zero")
+	cmd.Flags().BoolVar(&diagnose, "diagnose", false, "Test all notification methods")
 
 	return cmd
 }
@@ -372,5 +375,67 @@ func TestIfFailedNotifiesOnFailure(t *testing.T) {
 	// Should produce bell output (notification sent)
 	if stdout.String() != "\x07" {
 		t.Errorf("--if-failed with exit 1 should produce bell, got: %q", stdout.String())
+	}
+}
+
+func TestDiagnoseFlag(t *testing.T) {
+	cmd := newTestCommand()
+	cmd.SetArgs([]string{"--diagnose"})
+
+	err := cmd.ParseFlags([]string{"--diagnose"})
+	if err != nil {
+		t.Errorf("Failed to parse --diagnose flag: %v", err)
+	}
+}
+
+func TestTerminalName(t *testing.T) {
+	tests := []struct {
+		input detect.Terminal
+		want  string
+	}{
+		{detect.TerminalUnknown, "unknown"},
+		{detect.TerminalKitty, "kitty"},
+		{detect.TerminalITerm2, "iterm2"},
+		{detect.TerminalWezTerm, "wezterm"},
+		{detect.TerminalGhostty, "ghostty"},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.input), func(t *testing.T) {
+			got := terminalName(tt.input)
+			if got != tt.want {
+				t.Errorf("terminalName(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestProtocolName(t *testing.T) {
+	tests := []struct {
+		input detect.Protocol
+		want  string
+	}{
+		{detect.ProtocolOSC9, "OSC 9 (iTerm2)"},
+		{detect.ProtocolOSC777, "OSC 777 (WezTerm/Ghostty/VTE)"},
+		{detect.ProtocolOSC99, "OSC 99 (Kitty)"},
+		{detect.ProtocolNone, "none"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			got := protocolName(tt.input)
+			if got != tt.want {
+				t.Errorf("protocolName(%v) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAvailableStr(t *testing.T) {
+	if availableStr(true) != "available" {
+		t.Error("availableStr(true) should return 'available'")
+	}
+	if availableStr(false) != "not available" {
+		t.Error("availableStr(false) should return 'not available'")
 	}
 }
