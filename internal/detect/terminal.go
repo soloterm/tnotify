@@ -1,6 +1,10 @@
 package detect
 
-import "os"
+import (
+	"os"
+	"strconv"
+	"strings"
+)
 
 // Terminal represents a detected terminal emulator.
 type Terminal string
@@ -121,14 +125,54 @@ func SelectProtocol(terminal Terminal) Protocol {
 }
 
 // SupportsProgress returns true if the terminal supports OSC 9;4 progress bars.
-// Supported by: Windows Terminal, Ghostty, ConEmu, Mintty
+// Supported by: Windows Terminal, Ghostty (1.2+), iTerm2 (3.6.6+), ConEmu, Mintty
 func SupportsProgress(terminal Terminal) bool {
 	switch terminal {
 	case TerminalWindowsTerminal, TerminalGhostty:
 		return true
+	case TerminalITerm2:
+		// iTerm2 added OSC 9;4 support in version 3.6.6
+		return compareVersion(os.Getenv("TERM_PROGRAM_VERSION"), "3.6.6") >= 0
 	default:
 		return false
 	}
+}
+
+// compareVersion compares two semantic version strings.
+// Returns -1 if a < b, 0 if a == b, 1 if a > b.
+// Handles versions like "3.6.6" or "3.6.6-beta".
+func compareVersion(a, b string) int {
+	// Strip any suffix after hyphen (e.g., "3.6.6-beta" -> "3.6.6")
+	a = strings.Split(a, "-")[0]
+	b = strings.Split(b, "-")[0]
+
+	partsA := strings.Split(a, ".")
+	partsB := strings.Split(b, ".")
+
+	// Compare each component
+	maxLen := len(partsA)
+	if len(partsB) > maxLen {
+		maxLen = len(partsB)
+	}
+
+	for i := 0; i < maxLen; i++ {
+		var numA, numB int
+		if i < len(partsA) {
+			numA, _ = strconv.Atoi(partsA[i])
+		}
+		if i < len(partsB) {
+			numB, _ = strconv.Atoi(partsB[i])
+		}
+
+		if numA < numB {
+			return -1
+		}
+		if numA > numB {
+			return 1
+		}
+	}
+
+	return 0
 }
 
 // Capabilities describes terminal notification capabilities.

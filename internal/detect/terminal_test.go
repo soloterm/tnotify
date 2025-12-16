@@ -41,6 +41,7 @@ var terminalEnvVars = []string{
 	"KONSOLE_VERSION",
 	"GHOSTTY_RESOURCES_DIR",
 	"TERM_PROGRAM",
+	"TERM_PROGRAM_VERSION",
 	"VTE_VERSION",
 }
 
@@ -292,6 +293,95 @@ func TestGetCapabilities(t *testing.T) {
 		}
 		if caps.SupportsID {
 			t.Error("SupportsID should be false for OSC777")
+		}
+	})
+}
+
+func TestCompareVersion(t *testing.T) {
+	tests := []struct {
+		a, b string
+		want int
+	}{
+		{"3.6.6", "3.6.6", 0},
+		{"3.6.7", "3.6.6", 1},
+		{"3.6.5", "3.6.6", -1},
+		{"3.7.0", "3.6.6", 1},
+		{"3.5.10", "3.6.6", -1},
+		{"4.0.0", "3.6.6", 1},
+		{"2.9.9", "3.6.6", -1},
+		{"3.6.6-beta", "3.6.6", 0},
+		{"3.6.7-rc1", "3.6.6", 1},
+		{"", "3.6.6", -1},
+		{"3.6", "3.6.6", -1},
+		{"3.6.6.1", "3.6.6", 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.a+"_vs_"+tt.b, func(t *testing.T) {
+			got := compareVersion(tt.a, tt.b)
+			if got != tt.want {
+				t.Errorf("compareVersion(%q, %q) = %d, want %d", tt.a, tt.b, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSupportsProgress(t *testing.T) {
+	snap := saveEnv(terminalEnvVars...)
+	defer snap.restore()
+
+	t.Run("Ghostty supports progress", func(t *testing.T) {
+		if !SupportsProgress(TerminalGhostty) {
+			t.Error("Ghostty should support progress")
+		}
+	})
+
+	t.Run("Windows Terminal supports progress", func(t *testing.T) {
+		if !SupportsProgress(TerminalWindowsTerminal) {
+			t.Error("Windows Terminal should support progress")
+		}
+	})
+
+	t.Run("iTerm2 3.6.6+ supports progress", func(t *testing.T) {
+		clearEnv(terminalEnvVars...)
+		os.Setenv("TERM_PROGRAM_VERSION", "3.6.6")
+		if !SupportsProgress(TerminalITerm2) {
+			t.Error("iTerm2 3.6.6 should support progress")
+		}
+	})
+
+	t.Run("iTerm2 3.6.7 supports progress", func(t *testing.T) {
+		clearEnv(terminalEnvVars...)
+		os.Setenv("TERM_PROGRAM_VERSION", "3.6.7")
+		if !SupportsProgress(TerminalITerm2) {
+			t.Error("iTerm2 3.6.7 should support progress")
+		}
+	})
+
+	t.Run("iTerm2 3.6.5 does not support progress", func(t *testing.T) {
+		clearEnv(terminalEnvVars...)
+		os.Setenv("TERM_PROGRAM_VERSION", "3.6.5")
+		if SupportsProgress(TerminalITerm2) {
+			t.Error("iTerm2 3.6.5 should not support progress")
+		}
+	})
+
+	t.Run("iTerm2 without version does not support progress", func(t *testing.T) {
+		clearEnv(terminalEnvVars...)
+		if SupportsProgress(TerminalITerm2) {
+			t.Error("iTerm2 without version should not support progress")
+		}
+	})
+
+	t.Run("WezTerm does not support progress", func(t *testing.T) {
+		if SupportsProgress(TerminalWezTerm) {
+			t.Error("WezTerm should not support progress")
+		}
+	})
+
+	t.Run("Unknown terminal does not support progress", func(t *testing.T) {
+		if SupportsProgress(TerminalUnknown) {
+			t.Error("Unknown terminal should not support progress")
 		}
 	})
 }

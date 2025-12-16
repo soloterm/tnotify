@@ -80,7 +80,7 @@ tnotify --version
 | Terminal | Protocol | Title | Urgency | IDs | Progress | Attention |
 |----------|----------|-------|---------|-----|----------|-----------|
 | Kitty | OSC 99 | ✓ | ✓ | ✓ | ✗ | ✗ |
-| iTerm2 | OSC 9 | ✗ | ✗ | ✗ | ✗ | ✓ |
+| iTerm2 | OSC 9 | ✗ | ✗ | ✗ | ✓ | ✓ |
 | WezTerm | OSC 777 | ✓ | ✗ | ✗ | ✗ | ✗ |
 | Ghostty | OSC 777 | ✓ | ✗ | ✗ | ✓ | ✗ |
 | Windows Terminal | OSC 9 | ✗ | ✗ | ✗ | ✓ | ✗ |
@@ -112,7 +112,7 @@ The `--if-failed` flag skips the notification entirely if the exit code is 0.
 
 ## Progress Bars
 
-Show progress in terminal tabs or taskbar. Only supported by Windows Terminal and Ghostty (1.2+). On unsupported terminals, `-p` prints plain text instead.
+Show progress in terminal tabs or taskbar. Supported by Windows Terminal, Ghostty (1.2+), and iTerm2 (3.6.6+). On unsupported terminals, `-p` prints plain text instead.
 
 ```bash
 # Normal progress (green)

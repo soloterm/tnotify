@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- iTerm2 3.6.6+ progress bar support via OSC 9;4
+
 ## [0.1.5] - 2025-12-16
 
 ### Added
