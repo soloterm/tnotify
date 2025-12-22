@@ -1,0 +1,12 @@
+{
+    "title": "tnotify",
+    "description": "A standalone CLI tool to send desktop notifications from the terminal via OSC escape sequences or native tools.",
+    "pages": [
+        { "slug": "index", "title": "Introduction" },
+        { "slug": "installation", "title": "Installation" },
+        { "slug": "usage", "title": "Usage" },
+        { "slug": "cli", "title": "CLI Reference" },
+        { "slug": "terminal-support", "title": "Terminal Support" },
+        { "slug": "troubleshooting", "title": "Troubleshooting" }
+    ]
+}
